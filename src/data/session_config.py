@@ -15,7 +15,8 @@ SPRINT_ROUNDS: Dict[int, List[int]] = {
     2022: [4, 11, 21],
     2023: [4, 10, 17, 18, 20],
     2024: [5, 11, 16, 17, 19],
-    2025: [],
+    2025: [2, 6, 13, 19, 21, 23],  # China, Miami, Belgium, USA, Brazil, Qatar
+    2026: [2],  # China confirmed; update as season progresses
 }
 
 # FastF1 session identifier strings
