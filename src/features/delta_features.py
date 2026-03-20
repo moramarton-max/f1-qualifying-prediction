@@ -2,11 +2,11 @@
 Compute session-to-session delta features for each driver within a weekend.
 
 Given a dict of {session_name: lap_features_df}, produces per-driver columns:
-  - LapTime_P5_{session}       : raw pace per session
+  - LapTime_median_{session}   : median of fastest laps per session
   - PaceRank_{session}         : pace rank per session
   - SpeedST_{session}          : top straight speed per session
-  - LapTime_improvement        : best_session_P5 - first_session_P5 (negative = improvement)
-  - PaceRank_improvement       : first_session_PaceRank - best_session_PaceRank (positive = improved)
+  - LapTime_improvement        : last_session_median - first_session_median (negative = improvement)
+  - PaceRank_improvement       : first_session_PaceRank - last_session_PaceRank (positive = improved)
 """
 
 from typing import Dict, List
@@ -43,14 +43,14 @@ def build_delta_features(
         df = session_features.get(session)
         if df is None or df.empty:
             # Session not available — leave as NaN (XGBoost handles this natively)
-            result[f"LapTime_P5_{session}"] = np.nan
+            result[f"LapTime_median_{session}"] = np.nan
             result[f"PaceRank_{session}"] = np.nan
             result[f"SpeedST_{session}"] = np.nan
             continue
 
-        sub = df[["Driver", "LapTime_P5", "PaceRank"]].copy()
+        sub = df[["Driver", "LapTime_median", "PaceRank"]].copy()
         sub = sub.rename(columns={
-            "LapTime_P5": f"LapTime_P5_{session}",
+            "LapTime_median": f"LapTime_median_{session}",
             "PaceRank": f"PaceRank_{session}",
         })
         if "SpeedST" in df.columns:
@@ -61,13 +61,13 @@ def build_delta_features(
         result = result.merge(sub, on="Driver", how="left")
 
     # Improvement deltas: use first and last available sessions
-    available = [s for s in session_order if f"LapTime_P5_{s}" in result.columns
-                 and result[f"LapTime_P5_{s}"].notna().any()]
+    available = [s for s in session_order if f"LapTime_median_{s}" in result.columns
+                 and result[f"LapTime_median_{s}"].notna().any()]
 
     if len(available) >= 2:
         first_s, last_s = available[0], available[-1]
         result["LapTime_improvement"] = (
-            result[f"LapTime_P5_{last_s}"] - result[f"LapTime_P5_{first_s}"]
+            result[f"LapTime_median_{last_s}"] - result[f"LapTime_median_{first_s}"]
         )
         result["PaceRank_improvement"] = (
             result[f"PaceRank_{first_s}"] - result[f"PaceRank_{last_s}"]

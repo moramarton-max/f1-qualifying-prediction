@@ -35,7 +35,7 @@ def test_extract_returns_one_row_per_driver():
 def test_pace_rank_is_1_for_fastest():
     laps = _make_laps(n_drivers=3)
     result = extract_lap_features(laps)
-    fastest = result.loc[result["LapTime_P5"].idxmin(), "Driver"]
+    fastest = result.loc[result["LapTime_median"].idxmin(), "Driver"]
     assert result.loc[result["Driver"] == fastest, "PaceRank"].values[0] == 1
 
 

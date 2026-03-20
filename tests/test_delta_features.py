@@ -9,7 +9,7 @@ def _make_session_features(drivers, base_time=90.0, offset=0.0):
     rows = [
         {
             "Driver": d,
-            "LapTime_P5": base_time + i * 0.3 + offset,
+            "LapTime_median": base_time + i * 0.3 + offset,
             "PaceRank": i + 1,
             "SpeedST": 310.0 - i,
         }
@@ -25,16 +25,16 @@ def test_columns_created_for_each_session():
     fp1 = _make_session_features(DRIVERS)
     fp2 = _make_session_features(DRIVERS, offset=-0.2)
     result = build_delta_features({"FP1": fp1, "FP2": fp2}, ["FP1", "FP2"])
-    assert "LapTime_P5_FP1" in result.columns
-    assert "LapTime_P5_FP2" in result.columns
+    assert "LapTime_median_FP1" in result.columns
+    assert "LapTime_median_FP2" in result.columns
     assert "PaceRank_FP1" in result.columns
 
 
 def test_missing_session_gives_nan():
     fp1 = _make_session_features(DRIVERS)
     result = build_delta_features({"FP1": fp1}, ["FP1", "FP2", "FP3"])
-    assert result["LapTime_P5_FP2"].isna().all()
-    assert result["LapTime_P5_FP3"].isna().all()
+    assert result["LapTime_median_FP2"].isna().all()
+    assert result["LapTime_median_FP3"].isna().all()
 
 
 def test_improvement_is_negative_when_faster():

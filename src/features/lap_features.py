@@ -1,13 +1,17 @@
 """
-Extract per-driver lap features from a raw laps DataFrame.
+Extract per-driver lap features from a pre-filtered laps DataFrame.
 
-Features produced (per driver per session):
-  - LapTime_P5      : 5th-percentile lap time (seconds) over clean laps
-  - PaceRank        : position rank by LapTime_P5 within the session (1 = fastest)
-  - SpeedI1         : median SpeedI1 (intermediate speed trap 1) over clean laps
-  - SpeedI2         : median SpeedI2 (intermediate speed trap 2) over clean laps
-  - SpeedFL         : median SpeedFL (finish-line speed) over clean laps
-  - SpeedST         : median SpeedST (speed trap) over clean laps — proxy for top straight speed
+The fetcher already keeps only the TOP_N fastest clean laps per driver,
+so this module just aggregates those into a single row per driver.
+
+Features produced:
+  - LapTime_median  : median lap time (seconds) over the stored fastest laps
+  - LapTime_best    : single fastest lap time (seconds)
+  - PaceRank        : rank by LapTime_median within the session (1 = fastest)
+  - SpeedI1         : median SpeedI1 over stored laps
+  - SpeedI2         : median SpeedI2 over stored laps
+  - SpeedFL         : median SpeedFL over stored laps
+  - SpeedST         : median SpeedST over stored laps (top straight speed proxy)
 """
 
 import numpy as np
@@ -17,68 +21,49 @@ from src.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-LAP_PERCENTILE = 5
-MIN_LAPS = 3
-
 SPEED_COLS = ["SpeedI1", "SpeedI2", "SpeedFL", "SpeedST"]
 
-
-def _clean_laps(laps: pd.DataFrame) -> pd.DataFrame:
-    """Keep only accurate, non-pit-out, non-wet laps with a valid lap time."""
-    # Drop wet sessions entirely — speed values are not comparable
-    if laps.get("IsWet", pd.Series(False, index=laps.index)).any():
-        logger.debug("Skipping wet session laps")
-        return laps.iloc[0:0]
-
-    is_accurate = laps["IsAccurate"].fillna(False).astype(bool)
-    has_laptime = laps["LapTime"].notna()
-
-    # PitOutTime is NaT for normal laps; not NaT means it was a pit-out lap
-    if "PitOutTime" in laps.columns:
-        is_pit_out = laps["PitOutTime"].notna()
-    else:
-        is_pit_out = pd.Series(False, index=laps.index)
-
-    return laps[is_accurate & has_laptime & ~is_pit_out].copy()
+# Minimum number of laps required to include a driver
+MIN_LAPS = 2
 
 
-def _lap_time_seconds(laps: pd.DataFrame) -> pd.Series:
-    """Convert LapTime (timedelta or float) to seconds."""
-    lt = laps["LapTime"]
-    if pd.api.types.is_timedelta64_dtype(lt):
-        return lt.dt.total_seconds()
-    return lt.astype(float)
+def _lap_time_seconds(series: pd.Series) -> pd.Series:
+    if pd.api.types.is_timedelta64_dtype(series):
+        return series.dt.total_seconds()
+    return series.astype(float)
 
 
 def extract_lap_features(laps: pd.DataFrame) -> pd.DataFrame:
     """
-    Given a raw laps DataFrame for one session, return a tidy DataFrame
-    indexed by Driver with the features listed in the module docstring.
+    Aggregate pre-filtered laps into one row per driver.
+    Input is expected to already contain only the fastest clean laps
+    (as saved by the fetcher).
     """
-    clean = _clean_laps(laps)
-    if clean.empty:
-        logger.warning("No clean laps available for feature extraction.")
+    if laps.empty or "Driver" not in laps.columns:
         return pd.DataFrame()
 
-    clean = clean.copy()
-    clean["LapTime_s"] = _lap_time_seconds(clean)
+    # Wet sessions were already dropped in the fetcher; double-check here
+    if laps.get("IsWet", pd.Series(False, index=laps.index)).any():
+        logger.debug("Skipping wet session.")
+        return pd.DataFrame()
 
-    # Keep only drivers with enough clean laps
-    lap_counts = clean.groupby("Driver")["LapTime_s"].count()
-    valid_drivers = lap_counts[lap_counts >= MIN_LAPS].index
-    clean = clean[clean["Driver"].isin(valid_drivers)]
+    laps = laps.copy()
+    laps["LapTime_s"] = _lap_time_seconds(laps["LapTime"])
 
-    if clean.empty:
+    # Drop drivers with too few laps
+    counts = laps.groupby("Driver")["LapTime_s"].count()
+    valid = counts[counts >= MIN_LAPS].index
+    laps = laps[laps["Driver"].isin(valid)]
+    if laps.empty:
         return pd.DataFrame()
 
     records = []
-    for driver, group in clean.groupby("Driver"):
+    for driver, group in laps.groupby("Driver"):
         row: dict = {"Driver": driver}
+        times = group["LapTime_s"].dropna()
+        row["LapTime_median"] = float(times.median())
+        row["LapTime_best"] = float(times.min())
 
-        # 5th-percentile lap time
-        row["LapTime_P5"] = float(np.percentile(group["LapTime_s"].dropna(), LAP_PERCENTILE))
-
-        # Speed traps: median over clean laps
         for col in SPEED_COLS:
             if col in group.columns:
                 vals = pd.to_numeric(group[col], errors="coerce").dropna()
@@ -89,11 +74,6 @@ def extract_lap_features(laps: pd.DataFrame) -> pd.DataFrame:
         records.append(row)
 
     result = pd.DataFrame(records)
-    if result.empty:
-        return result
-
-    # Add pace rank (1 = fastest)
-    result = result.sort_values("LapTime_P5").reset_index(drop=True)
-    result["PaceRank"] = result["LapTime_P5"].rank(method="min").astype(int)
-
+    result["PaceRank"] = result["LapTime_median"].rank(method="min").astype(int)
+    result = result.sort_values("LapTime_median").reset_index(drop=True)
     return result
