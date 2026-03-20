@@ -36,7 +36,14 @@ def main():
         logger.error("Column 'QualiPos' not found. Ensure your feature table includes actual qualifying results.")
         sys.exit(1)
 
-    logger.info(f"Loaded feature table: {df.shape}")
+    # Only train on the training split — never touch the holdout
+    if "Split" in df.columns:
+        test_rows = (df["Split"] == "test").sum()
+        df = df[df["Split"] == "train"].reset_index(drop=True)
+        logger.info(f"Train split: {len(df)} rows  |  Holdout (excluded): {test_rows} rows")
+    else:
+        logger.info(f"Loaded feature table: {df.shape}")
+
     train(
         df,
         target_col="QualiPos",

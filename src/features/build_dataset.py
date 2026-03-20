@@ -24,6 +24,16 @@ from src.utils.regulation_era import get_era, get_sample_weight
 
 logger = get_logger(__name__)
 
+# Temporal holdout split — do not change once training has started
+TEST_WEEKENDS = {
+    (2025, 21), (2025, 22), (2025, 23), (2025, 24),  # last 4 rounds of 2025
+    (2026, 1), (2026, 2),                              # first 2 rounds of 2026
+}
+
+
+def get_split(year: int, round_number: int) -> str:
+    return "test" if (year, round_number) in TEST_WEEKENDS else "train"
+
 
 def _load_quali_results(year: int, round_number: int, raw_dir: str) -> Optional[pd.DataFrame]:
     """Load saved qualifying results (Driver, QualiPos) for one weekend."""
@@ -83,6 +93,7 @@ def _build_weekend_row(
     delta_df["Target"] = target
     delta_df["Era"] = get_era(year)
     delta_df["SampleWeight"] = get_sample_weight(year)
+    delta_df["Split"] = get_split(year, round_number)
 
     # Attach qualifying results as training labels
     if include_labels:
