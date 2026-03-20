@@ -1,0 +1,29 @@
+# F1 Qualifying Prediction — Project Goals
+
+## Objective
+Build a machine learning model to predict Formula 1 qualifying and sprint qualifying results
+based on data from previous sessions of the same race weekend
+(e.g. sprint qualifying results are available when predicting full qualifying).
+
+## Data Source
+- FastF1 API (telemetry data)
+
+## Key Challenges
+1. **High dimensionality, low data volume** — many potential features but limited historical
+   race weekends to train on; feature selection is critical.
+2. **New regulations (2026)** — historical patterns may not fully transfer to the new
+   regulatory era; model must handle distribution shift.
+
+## Feature Ideas
+- **Minimum corner speeds** — indicative of downforce / mechanical grip level
+- **Top speeds on straights** — indicative of drag / power unit performance
+- **Team modifiers** — some teams (e.g. Red Bull) historically extract more performance
+  from Friday to Saturday
+- **Driver modifiers** — individual driver performance deltas across sessions
+- **Engine/PU grouping** — compare acceleration and top speed within the same power unit
+  family to estimate how much a team is sandbagging
+
+## Approach Notes
+- Use only a small, well-chosen feature set to avoid overfitting
+- Account for same-weekend session progression (FP1 → FP2 → FP3 → Sprint Quali → Quali)
+- Consider engine manufacturer as a grouping variable to normalise PU-related variance
