@@ -1,0 +1,51 @@
+fastf1_cache: "cache/"
+data_raw_dir: "data/raw/"
+data_processed_dir: "data/processed/"
+models_dir: "models/artifacts/"
+
+# Seasons to train on
+train_seasons: [2022, 2023, 2024, 2025]
+
+# Session ordering per weekend format
+standard_weekend: ["FP1", "FP2", "FP3", "Q"]
+sprint_weekend: ["FP1", "SQ", "S", "Q"]
+
+# Sprint weekends by year (round numbers)
+sprint_rounds:
+  2022: [4, 11, 21]
+  2023: [4, 10, 17, 18, 20]
+  2024: [5, 11, 16, 17, 19]
+  2025: []  # to be updated
+
+# Feature engineering
+lap_percentile: 5           # use 5th-percentile lap, not single fastest
+min_laps_required: 3        # minimum clean laps for a driver to be included
+
+# Regulation eras for distribution-shift handling
+eras:
+  pre_2022: [2018, 2019, 2020, 2021]
+  hybrid_v2: [2022, 2023, 2024, 2025]
+  new_regs: [2026]
+
+# Sample weights per era (higher = more influence on training)
+era_weights:
+  pre_2022: 0.3
+  hybrid_v2: 1.0
+  new_regs: 1.0
+
+# Model
+model_type: "xgboost"         # options: "xgboost", "ridge", "random_forest"
+cv_strategy: "leave_one_season_out"
+n_optuna_trials: 50
+random_seed: 42
+
+# XGBoost defaults (tuned by optuna, these are starting points)
+xgb_params:
+  objective: "rank:pairwise"
+  n_estimators: 200
+  max_depth: 4
+  learning_rate: 0.05
+  subsample: 0.8
+  colsample_bytree: 0.8
+  reg_alpha: 0.1
+  reg_lambda: 1.0

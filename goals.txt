@@ -4,6 +4,7 @@
 Build a machine learning model to predict Formula 1 qualifying and sprint qualifying results
 based on data from previous sessions of the same race weekend
 (e.g. sprint qualifying results are available when predicting full qualifying).
+Use python
 
 ## Data Source
 - FastF1 API (telemetry data)
