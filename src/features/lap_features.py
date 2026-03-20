@@ -25,16 +25,21 @@ SPEED_COLS = ["SpeedI1", "SpeedI2", "SpeedFL", "SpeedST"]
 
 def _clean_laps(laps: pd.DataFrame) -> pd.DataFrame:
     """Keep only accurate, non-pit-out, non-wet laps with a valid lap time."""
-    mask = (
-        laps["IsAccurate"].fillna(False).astype(bool)
-        & ~laps.get("PitOutLap", pd.Series(False, index=laps.index)).fillna(False).astype(bool)
-        & laps["LapTime"].notna()
-    )
     # Drop wet sessions entirely — speed values are not comparable
     if laps.get("IsWet", pd.Series(False, index=laps.index)).any():
         logger.debug("Skipping wet session laps")
         return laps.iloc[0:0]
-    return laps[mask].copy()
+
+    is_accurate = laps["IsAccurate"].fillna(False).astype(bool)
+    has_laptime = laps["LapTime"].notna()
+
+    # PitOutTime is NaT for normal laps; not NaT means it was a pit-out lap
+    if "PitOutTime" in laps.columns:
+        is_pit_out = laps["PitOutTime"].notna()
+    else:
+        is_pit_out = pd.Series(False, index=laps.index)
+
+    return laps[is_accurate & has_laptime & ~is_pit_out].copy()
 
 
 def _lap_time_seconds(laps: pd.DataFrame) -> pd.Series:
