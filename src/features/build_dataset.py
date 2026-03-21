@@ -18,7 +18,7 @@ from src.data.loader import load_raw, save_raw, load_processed, save_processed
 from src.data.session_config import get_preceding_sessions
 from src.features.delta_features import build_delta_features
 from src.features.lap_features import extract_lap_features
-from src.features.modifier_features import attach_modifiers
+from src.features.modifier_features import attach_modifiers, build_historical_modifiers
 from src.utils.logging_config import get_logger
 from src.utils.regulation_era import get_era, get_sample_weight
 
@@ -43,10 +43,20 @@ def _load_quali_results(year: int, round_number: int, raw_dir: str) -> Optional[
     return pd.read_parquet(path)[["Driver", "QualiPos"]]
 
 
+def _load_all_results(raw_dir: str) -> pd.DataFrame:
+    """Load all saved Q_results files into one DataFrame."""
+    frames = []
+    for fname in os.listdir(raw_dir):
+        if fname.endswith("_Q_results.parquet"):
+            frames.append(pd.read_parquet(os.path.join(raw_dir, fname)))
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+
+
 def _build_weekend_row(
     year: int,
     round_number: int,
     target: str,
+    all_results: pd.DataFrame,
     available_sessions: Optional[List[str]] = None,
     raw_dir: str = "data/raw/",
     include_labels: bool = True,
@@ -85,7 +95,10 @@ def _build_weekend_row(
             break
 
     delta_df["Team"] = delta_df["Driver"].map(team_map)
-    delta_df = attach_modifiers(delta_df)
+
+    # Build historical modifiers from prior races only (no leakage)
+    team_mods, driver_mods = build_historical_modifiers(all_results, year, round_number)
+    delta_df = attach_modifiers(delta_df, team_mods, driver_mods)
 
     # Weekend metadata
     delta_df["Year"] = year
@@ -120,10 +133,13 @@ def build_dataset(
     without labels so the training set stays clean).
     Saves processed features to disk by default.
     """
+    all_results = _load_all_results(raw_dir)
+    logger.info(f"Loaded {len(all_results)} historical Q results rows for modifier computation.")
+
     frames = []
     skipped = 0
     for year, round_number in weekends:
-        df = _build_weekend_row(year, round_number, target, raw_dir=raw_dir, include_labels=True)
+        df = _build_weekend_row(year, round_number, target, all_results, raw_dir=raw_dir, include_labels=True)
         if df is None:
             continue
         if df["QualiPos"].isna().all():
@@ -172,6 +188,7 @@ def build_weekend_features(
             if laps is not None:
                 save_raw(laps, year, round_number, session, raw_dir)
 
+    all_results = _load_all_results(raw_dir)
     return _build_weekend_row(
-        year, round_number, target, available_sessions, raw_dir, include_labels=False
+        year, round_number, target, all_results, available_sessions, raw_dir, include_labels=False
     )
