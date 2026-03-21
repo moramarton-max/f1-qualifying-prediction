@@ -68,7 +68,7 @@ def main():
             f"Spearman={metrics['spearman']:+.3f}  "
             f"Top5={metrics['top5_accuracy']:.2f}  "
             f"MAPE={metrics['mape']:.2f}  "
-            f"P1={'✓' if metrics['p1_hit_rate'] else '✗'}"
+            f"P1={'Y' if metrics['p1_hit_rate'] else 'N'}"
         )
 
     summary = pd.DataFrame(results)
