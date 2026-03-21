@@ -33,7 +33,7 @@ def test_top5_accuracy_zero():
     assert top_n_accuracy(y_true, y_pred, n=5) == pytest.approx(0.0)
 
 
-def test_mape_zero_for_perfect():
+def test_mape_pos_zero_for_perfect():
     assert mean_absolute_position_error(TRUE_RANKS, TRUE_RANKS) == pytest.approx(0.0)
 
 
@@ -49,4 +49,4 @@ def test_p1_hit_rate_wrong():
 
 def test_evaluate_all_returns_all_keys():
     metrics = evaluate_all(TRUE_RANKS, PERFECT_SCORES)
-    assert set(metrics.keys()) == {"spearman", "top5_accuracy", "mape", "p1_hit_rate"}
+    assert set(metrics.keys()) == {"spearman", "top5_accuracy", "mape_pos", "p1_hit_rate"}

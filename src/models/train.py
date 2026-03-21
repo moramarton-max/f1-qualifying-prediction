@@ -143,7 +143,7 @@ def _eval_fold(
         per_weekend.append(evaluate_all(y_val[mask], preds[mask]))
 
     if not per_weekend:
-        return {"spearman": 0.0, "top5_accuracy": 0.0, "mape": 0.0, "p1_hit_rate": 0.0}
+        return {"spearman": 0.0, "top5_accuracy": 0.0, "mape_pos": 0.0, "p1_hit_rate": 0.0}
 
     return {
         k: float(np.mean([m[k] for m in per_weekend]))
@@ -224,14 +224,14 @@ def train(
         logger.info(
             f"  Spearman={metrics['spearman']:+.3f}  "
             f"Top5={metrics['top5_accuracy']:.2f}  "
-            f"MAPE={metrics['mape']:.2f}  "
+            f"MAPE={metrics['mape_pos']:.2f}  "
             f"P1={metrics['p1_hit_rate']:.0%}"
         )
 
     metrics_df = pd.DataFrame(fold_metrics)
     logger.info(
         f"\nCV summary:\n"
-        f"{metrics_df[['val_season','spearman','top5_accuracy','mape','p1_hit_rate']].to_string()}"
+        f"{metrics_df[['val_season','spearman','top5_accuracy','mape_pos','p1_hit_rate']].to_string()}"
     )
 
     # Final model on all data

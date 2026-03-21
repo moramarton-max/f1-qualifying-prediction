@@ -21,6 +21,7 @@ def top_n_accuracy(y_true: np.ndarray, y_pred_ranks: np.ndarray, n: int = 5) -> 
 
 
 def mean_absolute_position_error(y_true: np.ndarray, y_pred_ranks: np.ndarray) -> float:
+    """Average number of grid positions the prediction is off by (lower = better)."""
     return float(np.mean(np.abs(y_true - y_pred_ranks)))
 
 
@@ -40,6 +41,6 @@ def evaluate_all(y_true: np.ndarray, y_pred_scores: np.ndarray) -> Dict[str, flo
     return {
         "spearman": spearman_correlation(y_true, pred_ranks),
         "top5_accuracy": top_n_accuracy(y_true, pred_ranks, n=5),
-        "mape": mean_absolute_position_error(y_true, pred_ranks),
+        "mape_pos": mean_absolute_position_error(y_true, pred_ranks),
         "p1_hit_rate": p1_hit_rate(y_true, pred_ranks),
     }

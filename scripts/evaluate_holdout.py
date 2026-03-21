@@ -67,7 +67,7 @@ def main():
             f"  {year} R{rnd:>2}  "
             f"Spearman={metrics['spearman']:+.3f}  "
             f"Top5={metrics['top5_accuracy']:.2f}  "
-            f"MAPE={metrics['mape']:.2f}  "
+            f"MAPE={metrics['mape_pos']:.2f}  "
             f"P1={'Y' if metrics['p1_hit_rate'] else 'N'}"
         )
 
@@ -75,11 +75,11 @@ def main():
     print("\n" + "=" * 55)
     print("  Holdout evaluation summary")
     print("=" * 55)
-    print(summary[["Year", "Round", "spearman", "top5_accuracy", "mape", "p1_hit_rate"]].to_string(index=False))
+    print(summary[["Year", "Round", "spearman", "top5_accuracy", "mape_pos", "p1_hit_rate"]].to_string(index=False))
     print("-" * 55)
     print(f"  Mean  Spearman : {summary['spearman'].mean():+.3f}")
     print(f"  Mean  Top-5    : {summary['top5_accuracy'].mean():.2f}")
-    print(f"  Mean  MAPE     : {summary['mape'].mean():.2f}")
+    print(f"  Mean  MAPE     : {summary['mape_pos'].mean():.2f}")
     print(f"  P1 hit rate    : {summary['p1_hit_rate'].mean():.0%}")
     print("=" * 55)
 
